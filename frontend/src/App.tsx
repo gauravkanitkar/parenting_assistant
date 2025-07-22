@@ -242,7 +242,7 @@ const App: React.FC = () => {
         {isLoading && (
           <div className='message assistant-message'>
             <div className='message-content'>
-              <div className='loading-dots'>
+              <div className='loading-dots' data-testid='loading-dots'>
                 <div className='dot'></div>
                 <div className='dot'></div>
                 <div className='dot'></div>
@@ -288,6 +288,7 @@ const App: React.FC = () => {
             onClick={handleSendMessage}
             disabled={isLoading || !inputMessage.trim()}
             className='send-button'
+            data-testid='send-button'
           >
             <Send size={20} />
           </button>
