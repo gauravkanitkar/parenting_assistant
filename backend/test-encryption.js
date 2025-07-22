@@ -8,49 +8,51 @@ const crypto = require('crypto');
 
 class EncryptionService {
   static algorithm = 'aes-256-gcm';
-  
+
   static encrypt(text, masterKey) {
     try {
       const key = crypto.scryptSync(masterKey, 'salt', 32);
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv(this.algorithm, key, iv);
       cipher.setAAD(Buffer.from('parenting-assistant', 'utf8'));
-      
+
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      
+
       const authTag = cipher.getAuthTag();
-      return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+      return (
+        iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted
+      );
     } catch (error) {
       throw new Error(`Encryption failed: ${error}`);
     }
   }
-  
+
   static decrypt(encryptedData, masterKey) {
     try {
       const parts = encryptedData.split(':');
       if (parts.length !== 3) {
         throw new Error('Invalid encrypted data format');
       }
-      
+
       const [ivHex, authTagHex, encrypted] = parts;
       const key = crypto.scryptSync(masterKey, 'salt', 32);
       const iv = Buffer.from(ivHex, 'hex');
       const authTag = Buffer.from(authTagHex, 'hex');
-      
+
       const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
       decipher.setAAD(Buffer.from('parenting-assistant', 'utf8'));
       decipher.setAuthTag(authTag);
-      
+
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error) {
       throw new Error(`Decryption failed: ${error}`);
     }
   }
-  
+
   static generateMasterKey() {
     return crypto.randomBytes(32).toString('hex');
   }
@@ -69,11 +71,11 @@ try {
   // Encrypt
   const encrypted = EncryptionService.encrypt(testApiKey, masterKey);
   console.log('🔒 Encrypted:', encrypted);
-  
+
   // Decrypt
   const decrypted = EncryptionService.decrypt(encrypted, masterKey);
   console.log('🔓 Decrypted:', decrypted);
-  
+
   // Verify
   if (testApiKey === decrypted) {
     console.log('\n✅ Encryption/Decryption test PASSED!');

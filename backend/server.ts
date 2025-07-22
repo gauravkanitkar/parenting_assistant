@@ -34,18 +34,20 @@ const openai = new OpenAI({
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 
 // Rate limiting - prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
+    error: 'Too many requests from this IP, please try again later.',
+  },
 });
 app.use('/api/', limiter);
 
@@ -54,32 +56,38 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'Server is running', 
-    timestamp: new Date().toISOString() 
+  res.json({
+    status: 'Server is running',
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Chat endpoint
-app.post('/api/chat', async (req: ChatRequest, res: Response<ChatResponse | ErrorResponse>) => {
-  try {
-    const { message } = req.body;
-    
-    // Validation
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ 
-        error: 'Message is required and must be a non-empty string' 
-      });
-    }
+app.post(
+  '/api/chat',
+  async (req: ChatRequest, res: Response<ChatResponse | ErrorResponse>) => {
+    try {
+      const { message } = req.body;
 
-    if (message.length > 1000) {
-      return res.status(400).json({ 
-        error: 'Message is too long. Please keep it under 1000 characters.' 
-      });
-    }
+      // Validation
+      if (
+        !message ||
+        typeof message !== 'string' ||
+        message.trim().length === 0
+      ) {
+        return res.status(400).json({
+          error: 'Message is required and must be a non-empty string',
+        });
+      }
 
-    // Create specialized prompt for parenting advice
-    const systemPrompt = `You are a supportive AI assistant for new parents. You provide evidence-based, gentle advice about newborn care. Key guidelines:
+      if (message.length > 1000) {
+        return res.status(400).json({
+          error: 'Message is too long. Please keep it under 1000 characters.',
+        });
+      }
+
+      // Create specialized prompt for parenting advice
+      const systemPrompt = `You are a supportive AI assistant for new parents. You provide evidence-based, gentle advice about newborn care. Key guidelines:
 
 1. Always be reassuring and supportive - parenting is overwhelming
 2. Reference reliable sources (AAP, WHO, pediatric guidelines) when relevant
@@ -93,79 +101,85 @@ app.post('/api/chat', async (req: ChatRequest, res: Response<ChatResponse | Erro
 
 Remember: Every baby is unique, and you're supporting tired, potentially anxious new parents.`;
 
-    console.log(`[${new Date().toISOString()}] Processing message: ${message.substring(0, 50)}...`);
+      console.log(
+        `[${new Date().toISOString()}] Processing message: ${message.substring(0, 50)}...`
+      );
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
-      max_tokens: 400,
-      temperature: 0.7,
-      presence_penalty: 0.1,
-      frequency_penalty: 0.1
-    });
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+        presence_penalty: 0.1,
+        frequency_penalty: 0.1,
+      });
 
-    const response = completion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error('No response generated from OpenAI');
-    }
+      const response = completion.choices[0]?.message?.content;
 
-    console.log(`[${new Date().toISOString()}] Response generated successfully`);
-    
-    res.json({ 
-      response,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error: any) {
-    console.error('Chat error:', error);
-    
-    // Handle specific OpenAI errors
-    if (error.code === 'insufficient_quota') {
-      return res.status(402).json({ 
-        error: 'API quota exceeded. Please check your OpenAI billing.' 
+      if (!response) {
+        throw new Error('No response generated from OpenAI');
+      }
+
+      console.log(
+        `[${new Date().toISOString()}] Response generated successfully`
+      );
+
+      res.json({
+        response,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Chat error:', error);
+
+      // Handle specific OpenAI errors
+      if (error.code === 'insufficient_quota') {
+        return res.status(402).json({
+          error: 'API quota exceeded. Please check your OpenAI billing.',
+        });
+      }
+
+      if (error.code === 'invalid_api_key') {
+        return res.status(401).json({
+          error: 'Invalid API key. Please check your OpenAI configuration.',
+        });
+      }
+
+      if (error.code === 'rate_limit_exceeded') {
+        return res.status(429).json({
+          error: 'Rate limit exceeded. Please try again in a moment.',
+        });
+      }
+
+      // Generic error response
+      res.status(500).json({
+        error: "I'm having trouble right now. Please try again in a moment.",
       });
     }
-    
-    if (error.code === 'invalid_api_key') {
-      return res.status(401).json({ 
-        error: 'Invalid API key. Please check your OpenAI configuration.' 
-      });
-    }
-    
-    if (error.code === 'rate_limit_exceeded') {
-      return res.status(429).json({ 
-        error: 'Rate limit exceeded. Please try again in a moment.' 
-      });
-    }
-    
-    // Generic error response
-    res.status(500).json({ 
-      error: 'I\'m having trouble right now. Please try again in a moment.' 
-    });
   }
-});
+);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    error: 'Internal server error' 
+  res.status(500).json({
+    error: 'Internal server error',
   });
 });
 
 // 404 handler
 app.use('*', (req: Request, res: Response) => {
-  res.status(404).json({ 
-    error: 'Endpoint not found' 
+  res.status(404).json({
+    error: 'Endpoint not found',
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL}`);
-  console.log(`🔑 OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Missing'}`);
+  console.log(
+    `🔑 OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Missing'}`
+  );
 });

@@ -21,6 +21,7 @@ node encrypt-key.js
 ```
 
 Follow the prompts to:
+
 1. Enter your OpenAI API key
 2. Choose to generate a new master key or use an existing one
 3. Get encrypted values for your `.env` file
@@ -80,7 +81,7 @@ backend/
 
 ## 🔒 Security Best Practices
 
-1. **Store Master Key Separately**: 
+1. **Store Master Key Separately**:
    - Consider using environment variables from your hosting platform
    - Use secret management services (AWS Secrets Manager, Azure Key Vault, etc.)
    - Store in a different system than your encrypted key
@@ -101,24 +102,27 @@ backend/
 
 The system supports multiple configurations:
 
-| Setup | Environment Variables | Use Case |
-|-------|----------------------|----------|
+| Setup                       | Environment Variables                     | Use Case                      |
+| --------------------------- | ----------------------------------------- | ----------------------------- |
 | **Encrypted (Recommended)** | `MASTER_KEY` + `OPENAI_API_KEY_ENCRYPTED` | Production, enhanced security |
-| **Plain Text (Fallback)** | `OPENAI_API_KEY` | Development, quick setup |
+| **Plain Text (Fallback)**   | `OPENAI_API_KEY`                          | Development, quick setup      |
 
 ## 🚨 Migration from Plain Text
 
 1. **Current setup** (plain text):
+
    ```env
    OPENAI_API_KEY=sk-your-key-here
    ```
 
 2. **Run encryption tool**:
+
    ```bash
    node encrypt-key.js
    ```
 
 3. **Update .env**:
+
    ```env
    MASTER_KEY=generated-master-key
    OPENAI_API_KEY_ENCRYPTED=encrypted-data
@@ -130,16 +134,19 @@ The system supports multiple configurations:
 ## 🔍 Troubleshooting
 
 ### "Decryption failed" Error
+
 - Verify master key is correct
 - Ensure encrypted key wasn't corrupted during copy/paste
 - Check that both values are in the same environment
 
 ### "No OpenAI API key found" Error
+
 - Make sure either encrypted or plain text key is set
 - Verify `.env` file is in the correct location
 - Check environment variable names are correct
 
 ### Server Won't Start
+
 - Test encryption with `node test-encryption.js`
 - Verify all required dependencies are installed
 - Check TypeScript compilation with `npm run build`
@@ -147,6 +154,7 @@ The system supports multiple configurations:
 ## 🔄 Key Rotation Process
 
 1. **Generate new master key**:
+
    ```bash
    node encrypt-key.js  # Choose option 1
    ```
@@ -167,6 +175,7 @@ For production environments, consider:
 ## 📞 Support
 
 If you encounter issues:
+
 1. Run the test script: `node test-encryption.js`
 2. Check server logs for specific error messages
 3. Verify environment variable configuration

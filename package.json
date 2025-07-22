@@ -14,6 +14,24 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "nodemon": "^3.1.10"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "backend/**/*.{ts,js}": [
+      "cd backend && npm run lint:fix",
+      "cd backend && npm run format",
+      "cd backend && npm run type-check",
+      "cd backend && npm test -- --passWithNoTests"
+    ],
+    "frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "cd frontend && npm run lint:fix",
+      "cd frontend && npm run format",
+      "cd frontend && npm test -- --passWithNoTests --watchAll=false"
+    ]
   }
 }
